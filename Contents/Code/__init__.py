@@ -19,7 +19,7 @@ MOVIES_URL     = API_BASE_URL + '/play/movie_assets?platform=web&start=%s&rows=%
 
 TEMPLATE_VIDEO_URL = 'http://www.tv4play.se/%s/%s?video_id=%s'
 
-ITEMS_PER_PAGE = 25
+ITEMS_PER_PAGE = 50
 
 DISCLAIMER_NOTE = unicode("Vissa program är skyddade med DRM(Digital Rights Management). Dessa kan för närvarande ej spelas upp.")
 PREMIUM_PREVIEW_NOTE = unicode("Notera att du ej kan spela upp de program som endast är tillgängliga för Premium.")
@@ -510,7 +510,6 @@ def TV4Movies(title, offset = 0):
         if len(oc) < ITEMS_PER_PAGE:
             offset = offset+ITEMS_PER_PAGE
 
-        
     if len(oc) >= ITEMS_PER_PAGE and (offset + ITEMS_PER_PAGE) < movies['total_hits'] and len(movies['results']) > 0:
         oc.add(
             NextPageObject(
@@ -523,9 +522,9 @@ def TV4Movies(title, offset = 0):
                 title = "Fler ...",
                 # Since drm protection we don't know the number of pages...
                 summary = u'Vidare till n�sta sida',
-                art = art
-            )
-        )
+                art     = art
+                )
+               )
 
     if len(oc) < 1:
         oc.header  = NO_PROGRAMS_FOUND_HEADER

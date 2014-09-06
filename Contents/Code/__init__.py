@@ -458,7 +458,7 @@ def TV4Movies(title, offset = 0):
                 directors = [movie['director']] if movie['director'] else []
             except:
                 directors = []
-            
+
             try:
                 art = movie['image']
             except:
@@ -474,7 +474,7 @@ def TV4Movies(title, offset = 0):
             summary = movie['synopsis']
             if not summary:
                 summary = movie['description_short']
-
+        
             if not Prefs['premium']:
                 oc.add(
                     DirectoryObject(

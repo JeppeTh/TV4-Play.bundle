@@ -350,6 +350,9 @@ def TV4ShowChoice(title, showId, art, thumb, summary):
             oc.add(object)
 
     elif episodes['total_hits'] > 0 or clips['total_hits'] > 0:
+        # Episode or clips
+        ClipsObject = None
+        episodeReq = episodes['total_hits'] > 0
         if clips['total_hits'] > 0:
             title = title + " - Klipp"
         
@@ -360,11 +363,18 @@ def TV4ShowChoice(title, showId, art, thumb, summary):
                 episodeReq = episodes['total_hits'] > 0
         )
 
-    if len(oc) < 1:  
+    if (episodes['total_hits'] + clips['total_hits']) > 0:
+        return TV4Videos(showName   = showName,
+                         showId     = showId,
+                         art        = art,
+                         episodeReq = episodeReq,
+                         clips      = ClipsObject
+                         )
+
+    else :  
         oc.header  = NO_PROGRAMS_FOUND_HEADER
         oc.message = NO_PROGRAMS_FOUND_MESSAGE
-
-    return oc
+        return oc
 
 ####################################################################################################
 @route(PREFIX + '/TV4ShowVideos', episodeReq = bool, query = list, page = int)

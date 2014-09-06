@@ -460,8 +460,10 @@ def TV4PremiumRequired():
 def TV4Movies(title, offset = 0):
     oc = ObjectContainer(title2 = unicode(title))
     while len(oc) < ITEMS_PER_PAGE:
+        x = 0
         movies = JSON.ObjectFromURL(MOVIES_URL % (offset, ITEMS_PER_PAGE))
         for movie in movies['results']:
+            x = x+1
             if 'is_drm_protected' in movie and movie['is_drm_protected']:
                 continue
         
@@ -521,6 +523,8 @@ def TV4Movies(title, offset = 0):
                         )
                     )
             if len(oc) >= ITEMS_PER_PAGE:
+                # Modify offset since maybe we're not done with this page
+                offset = offset+x-ITEMS_PER_PAGE
                 break
         if len(movies['results']) == 0:
             break

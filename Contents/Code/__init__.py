@@ -81,6 +81,65 @@ def ValidatePrefs():
     
     return oc
 
+###################################################################################################
+def GetProgramsURL(name = '', category = ''):
+    url = API_BASE_URL + '/video/program_formats/list.json?sorttype=name&name=%s&category=%s' % (name, category)
+    return url
+    
+###################################################################################################
+def GetVideosURL(id = '', episodes = True, start = 0, rows = 0, text = ''):
+    url = API_BASE_URL + '/video/tv4play/programs/search.json?livepublished=false&sorttype=date&order=asc&start=%s&rows=%s&categoryids=%s&text=%s' % (start, rows, id, text)
+    if episodes:
+        url = url + '&video_types=programs'
+    else:
+        url = url + '&video_types=clips'
+        
+    if Prefs['onlyfree'] and not Prefs['premium']:
+        url = url + '&premium=false'
+        
+    return url
+
+###################################################################################################
+def GetVideoURL(id):
+    url = API_BASE_URL + '/video/tv4play/programs/search.json?vmanid=%s' % id
+        
+    if Prefs['onlyfree'] and not Prefs['premium']:
+        url = url + '&premium=false'
+        
+    return url
+    
+###################################################################################################
+def GetLiveURL():
+    url = API_BASE_URL + '/video/tv4play/programs/search.json?livepublished=true&sorttype=date&order=asc&start=0&rows=100'
+        
+    if Prefs['onlyfree'] and not Prefs['premium']:
+        url = url + '&premium=false'
+        
+    return url
+    
+###################################################################################################
+def GetMostWatchedURL(video_types):
+    url = API_BASE_URL + '/video/tv4play/programs/most_viewed.json'
+
+    if video_types == 'programs':
+        url = url + "?video_types=programs"
+    else:
+        url = url + "?video_types=clips"
+        
+    if Prefs['onlyfree'] and not Prefs['premium']:
+        url = url + '&premium=false'
+        
+    return url
+    
+###################################################################################################
+def GetListingsURL(date = ""):
+    url = API_BASE_URL + '/tvdata/listings/TV4?date=%s' % date
+        
+    if Prefs['onlyfree'] and not Prefs['premium']:
+        url = url + '&premium=false'
+        
+    return url
+
 ####################################################################################################
 @handler(PREFIX, TITLE)
 def MainMenu():
@@ -400,71 +459,76 @@ def TV4PremiumRequired():
 @route(PREFIX + '/TV4Movies', offset = int)
 def TV4Movies(title, offset = 0):
     oc = ObjectContainer(title2 = unicode(title))
-    
-    movies = JSON.ObjectFromURL(MOVIES_URL % (offset, ITEMS_PER_PAGE))
-    for movie in movies['results']:
-        if 'is_drm_protected' in movie:
-            if movie['is_drm_protected']:
+    while len(oc) < ITEMS_PER_PAGE:
+        movies = JSON.ObjectFromURL(MOVIES_URL % (offset, ITEMS_PER_PAGE))
+        for movie in movies['results']:
+            if 'is_drm_protected' in movie and movie['is_drm_protected']:
                 continue
         
-        try:
-            genres = [movie['genre']]
-        except:
-            genres = None
+            try:
+                genres = (movie['genre'])
+            except:
+                genres = None
             
-        try:
-            duration = int(movie['length']) * 60 * 1000
-        except:
-            duration = None
+            try:
+                duration = int(movie['length']) * 60 * 1000
+            except:
+                duration = None
             
-        try:
-            year = int(movie['production_year'])
-        except:
-            year = None
+            try:
+                year = int(movie['production_year'])
+            except:
+                year = None
             
-        try:
-            art = movie['image']
-        except:
-            art = None
+            try:
+                art = movie['image']
+            except:
+                art = None
             
-        try:
-            thumb = movie['poster_image']
-            if not thumb.startswith('http'):
-                thumb = API_BASE_URL + '/play' + thumb
-        except:
-            thumb = None
+            try:
+                thumb = movie['poster_image']
+                if not thumb.startswith('http'):
+                    thumb = API_BASE_URL + '/play' + thumb
+            except:
+                thumb = None
             
-        summary = movie['synopsis']
-        if not summary:
-            summary = movie['description_short']
+            summary = movie['synopsis']
+            if not summary:
+                summary = movie['description_short']
         
-        if not Prefs['premium']:
-            oc.add(
-                DirectoryObject(
-                    key = Callback(TV4PremiumRequired),
-                    title = movie['title'],
-                    summary = summary,
-                    duration = duration,
-                    thumb = thumb,
-                    art = art
-                )
-            )
-        else:
-            oc.add(
-                MovieObject(
-                    url = TEMPLATE_VIDEO_URL % ('film', movie['id'], movie['id']),
-                    title = movie['title'],
-                    summary = summary,
-                    duration = duration,
-                    original_title = movie['original_title'],
-                    year = year,
-                    thumb = thumb,
-                    art = art
-                )
-            )
+            if not Prefs['premium']:
+                oc.add(
+                    DirectoryObject(
+                        key = Callback(TV4PremiumRequired),
+                        title = movie['title'],
+                        summary = summary,
+                        duration = duration,
+                        thumb = thumb,
+                        art = art
+                        )
+                    )
+            else:
+                oc.add(
+                    MovieObject(
+                        url = TEMPLATE_VIDEO_URL % ('film', movie['id'], movie['id']),
+                        title = movie['title'],
+                        summary = summary,
+                        duration = duration,
+                        original_title = movie['original_title'],
+                        year = year,
+                        thumb = thumb,
+                        art = art
+                        )
+                    )
+            if len(oc) >= ITEMS_PER_PAGE:
+                break
+        if len(movies['results']) == 0:
+            break
+        if len(oc) < ITEMS_PER_PAGE:
+            offset = offset+ITEMS_PER_PAGE
 
         
-    if len(oc) >= ITEMS_PER_PAGE and offset + ITEMS_PER_PAGE < movies['total_hits']:
+    if len(oc) >= ITEMS_PER_PAGE and (offset + ITEMS_PER_PAGE) < movies['total_hits'] and len(movies['results']) > 0:
         nextPage = (offset / ITEMS_PER_PAGE) + 2
         lastPage = (movies['total_hits'] / ITEMS_PER_PAGE) + 1
         oc.add(
@@ -475,7 +539,8 @@ def TV4Movies(title, offset = 0):
                         offset = offset + ITEMS_PER_PAGE
                     ),
                 title = "Fler ...",
-                summary = "Vidare till sida " + str(nextPage) + " av " + str(lastPage),
+                # Since drm protection we don't know the number of pages...
+                summary = u'Vidare till nästa sida',
                 art = art
             )
         )
@@ -530,6 +595,7 @@ def Search(query, title):
 
 ####################################################################################################
 def Videos(oc, videos):
+
     for video in videos['results']:
         if 'is_drm_protected' in video:
             if video['is_drm_protected']:
@@ -671,4 +737,3 @@ def GetLiveURL():
     url = API_BASE_URL + '/play/video_assets?broadcast_to=NOW&broadcast_from=19991231&is_live=true&platform=web&per_page=%s' % ITEMS_PER_PAGE
     
     return url
-

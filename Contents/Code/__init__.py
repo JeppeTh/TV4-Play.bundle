@@ -204,7 +204,7 @@ def MainMenu():
 
     return oc
 
-####################################################################################################
+###################################################################################################
 @route(PREFIX + '/TV4MostWatched')
 def TV4MostWatched(title):
     oc = ObjectContainer(title2 = unicode(title))
@@ -466,12 +466,18 @@ def TV4Movies(title, offset = 0):
             x = x+1
             if 'is_drm_protected' in movie and movie['is_drm_protected']:
                 continue
-        
+
             try:
-                genres = (movie['genre'])
+                genres = [movie['genre']] if movie['genre'] else []
             except:
-                genres = None
-            
+                genres = []
+
+            try:
+                for sub in movie['sub_genres']:
+                    genres.append(sub)
+            except:
+                pass
+
             try:
                 duration = int(movie['length']) * 60 * 1000
             except:
@@ -481,6 +487,11 @@ def TV4Movies(title, offset = 0):
                 year = int(movie['production_year'])
             except:
                 year = None
+
+            try:
+                directors = [movie['director']] if movie['director'] else []
+            except:
+                directors = []
             
             try:
                 art = movie['image']
@@ -497,7 +508,7 @@ def TV4Movies(title, offset = 0):
             summary = movie['synopsis']
             if not summary:
                 summary = movie['description_short']
-        
+
             if not Prefs['premium']:
                 oc.add(
                     DirectoryObject(
@@ -514,10 +525,12 @@ def TV4Movies(title, offset = 0):
                     MovieObject(
                         url = TEMPLATE_VIDEO_URL % ('film', movie['id'], movie['id']),
                         title = movie['title'],
+                        genres = genres,
                         summary = summary,
                         duration = duration,
                         original_title = movie['original_title'],
                         year = year,
+                        directors = directors,
                         thumb = thumb,
                         art = art
                         )
@@ -533,8 +546,6 @@ def TV4Movies(title, offset = 0):
 
         
     if len(oc) >= ITEMS_PER_PAGE and (offset + ITEMS_PER_PAGE) < movies['total_hits'] and len(movies['results']) > 0:
-        nextPage = (offset / ITEMS_PER_PAGE) + 2
-        lastPage = (movies['total_hits'] / ITEMS_PER_PAGE) + 1
         oc.add(
             NextPageObject(
                 key =

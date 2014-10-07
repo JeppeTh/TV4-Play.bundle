@@ -281,7 +281,7 @@ def TV4Categories(title):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/TV4Shows', page = int)
+@route(PREFIX + '/TV4Shows', query = list, page = int)
 def TV4Shows(title, categoryId = '', query = '', page = 1):
     oc = ObjectContainer(title2 = unicode(title))
     
@@ -367,7 +367,7 @@ def TV4ShowChoice(title, showId, art, thumb, summary):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/TV4ShowVideos', episodeReq = bool, page = int)
+@route(PREFIX + '/TV4ShowVideos', episodeReq = bool, query = list, page = int)
 def TV4ShowVideos(title, showId, art, episodeReq, query = '', page = 1):
     oc = ObjectContainer(title2 = unicode(title))
     

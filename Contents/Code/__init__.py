@@ -338,43 +338,27 @@ def TV4ShowChoice(title, showId, art, thumb, summary):
                 art = art
             )
         )
-        
-        episode_oc = TV4ShowVideos(
-            title = title,
-            showId = showId,
-            art = art,
-            episodeReq = True
-        )
-        
-        for object in episode_oc.objects:
-            oc.add(object)
-
+        episodeReq = True
     elif episodes['total_hits'] > 0 or clips['total_hits'] > 0:
-        # Episode or clips
-        ClipsObject = None
-        episodeReq = episodes['total_hits'] > 0
         if clips['total_hits'] > 0:
             title = title + " - Klipp"
+
+        episodeReq = episodes['total_hits'] > 0
+
+    episode_oc = TV4ShowVideos(title      = title,
+                               showId     = showId,
+                               art        = art,
+                               episodeReq = episodeReq
+                               )
         
-        return TV4ShowVideos(
-                title = title,
-                showId = showId,
-                art = art,
-                episodeReq = episodes['total_hits'] > 0
-        )
+    for object in episode_oc.objects:
+        oc.add(object)
 
-    if (episodes['total_hits'] + clips['total_hits']) > 0:
-        return TV4Videos(showName   = showName,
-                         showId     = showId,
-                         art        = art,
-                         episodeReq = episodeReq,
-                         clips      = ClipsObject
-                         )
-
-    else :  
+    if len(oc) < 1:  
         oc.header  = NO_PROGRAMS_FOUND_HEADER
         oc.message = NO_PROGRAMS_FOUND_MESSAGE
-        return oc
+
+    return oc
 
 ####################################################################################################
 @route(PREFIX + '/TV4ShowVideos', episodeReq = bool, query = list, page = int)
@@ -474,7 +458,7 @@ def TV4Movies(title, offset = 0):
             summary = movie['synopsis']
             if not summary:
                 summary = movie['description_short']
-        
+
             if not Prefs['premium']:
                 oc.add(
                     DirectoryObject(
@@ -522,9 +506,9 @@ def TV4Movies(title, offset = 0):
                 title = "Fler ...",
                 # Since drm protection we don't know the number of pages...
                 summary = u'Vidare till nästa sida',
-                art     = art
-                )
-               )
+                art = art
+            )
+        )
 
     if len(oc) < 1:
         oc.header  = NO_PROGRAMS_FOUND_HEADER

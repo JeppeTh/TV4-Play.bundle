@@ -292,21 +292,41 @@ def TV4Shows(title, categoryId = '', query = '', page = 1):
         oc.message = SERVER_MESSAGE
         
         return oc
+    else:
+        # Offset starts at 0 - page at 1...
+        (previousItem, nextItem) = GetNavigationItems((page-1)*ITEMS_PER_PAGE, programs['total_hits'])
 
-    elif len(oc) >= ITEMS_PER_PAGE:
-        oc.add(
-            NextPageObject(
-                key =
-                    Callback(
-                        TV4Shows,
-                        title = title,
-                        categoryId = categoryId,
-                        query = query,
-                        page = page + 1
-                    ),
-                title = "Fler ..."
-            )
-        )
+        if previousItem:
+            (previousOffset, previousTitle, previousSummary) = previousItem
+            # Prepend PreviousItem directory
+            oc.objects.reverse()
+            oc.add(DirectoryObject(
+                    key     = Callback(TV4Shows,
+                                       title      = title,
+                                       categoryId = categoryId,
+                                       query      = query,
+                                       page       = (previousOffset/ITEMS_PER_PAGE)+1
+                                       ),
+                    title   = previousTitle,
+                    summary = previousSummary
+                    )
+                   )
+            oc.objects.reverse()
+
+        if nextItem:
+            (nextOffset, nextTitle, nextSummary) = nextItem
+            # Append NextItem directory
+            oc.add(NextPageObject(
+                    key     = Callback(TV4Shows,
+                                       title      = title,
+                                       categoryId = categoryId,
+                                       query      = query,
+                                       page       = (nextOffset/ITEMS_PER_PAGE)+1
+                                       ),
+                    title   = nextTitle,
+                    summary = nextSummary
+                    )
+                   )
         
     return oc
     
@@ -380,24 +400,17 @@ def TV4ShowVideos(title, showId, art, episodeReq, query = '', page = 1):
             oc.message = NO_PROGRAMS_FOUND_MESSAGE
         else:
             oc.message = unicode('Inga fler program funna')
-        
-    elif len(oc) >= ITEMS_PER_PAGE:
-        oc.add(
-            NextPageObject(
-                key =
-                    Callback(
-                        TV4ShowVideos,
-                        title = title,
-                        showId = showId,
-                        art = art,
-                        episodeReq = episodeReq,
-                        query = query,
-                        page = page + 1
-                    ),
-                title = "Fler ..."
-            )
-        )
 
+    if len(oc) > 0 or page != 1:
+        oc = AddTV4ShowVideosNavigationDirs(oc,
+                                            page, 
+                                            videos['total_hits'],
+                                            title,
+                                            showId,
+                                            art,
+                                            episodeReq,
+                                            query
+                                            )
     return oc
 
 ####################################################################################################
@@ -499,19 +512,19 @@ def TV4Movies(title, offset = 0):
         if len(oc) < ITEMS_PER_PAGE:
             offset = offset+ITEMS_PER_PAGE
 
-    if len(oc) >= ITEMS_PER_PAGE and (offset + ITEMS_PER_PAGE) < movies['total_hits'] and len(movies['results']) > 0:
+    # Ignore previous since drm_protection messes up previous page offset
+    (previousItem, nextItem) = GetNavigationItems(offset, movies['total_hits'])
+
+    if nextItem and len(movies['results']) > 0:
+        (nextOffset, nextTitle, nextSummary) = nextItem
+        # Append NextItem directory
         oc.add(
             NextPageObject(
-                key =
-                    Callback(
-                        TV4Movies,
-                        title  = title,
-                        offset = offset + ITEMS_PER_PAGE
-                    ),
-                title = "Fler ...",
+                key    = Callback(TV4Movies, title  = title, offset = nextOffset),
+                title  = nextTitle,
                 # Since drm protection we don't know the number of pages...
                 summary = u'Vidare till nästa sida',
-                art = art
+                art     = art
             )
         )
 
@@ -754,3 +767,77 @@ def sortOnAirData(Objects):
         if obj.originally_available_at == None:
             return Objects.objects.reverse()
     return Objects.objects.sort(key=lambda obj: (obj.originally_available_at,obj.title))
+
+####################################################################################################
+def GetNavigationItems(offset,total_hits):
+    lastPage = (total_hits/ITEMS_PER_PAGE) + 1
+    if (offset + ITEMS_PER_PAGE) < total_hits:
+        nextPage = (offset / ITEMS_PER_PAGE) + 2
+        currPage = nextPage - 1
+    else:
+        nextPage = None
+        currPage = lastPage
+    prevPage = currPage - 1
+
+    if currPage == 1 and lastPage > 2:
+        # On first - previous page is "last" page
+        previousItem = (ITEMS_PER_PAGE*(lastPage-1), "<-Sista", u'Gå till sista sidan, sida ' + str(lastPage))
+    elif currPage > 1:
+        # Prepend Previous
+        previousItem = (offset-ITEMS_PER_PAGE, u'<-Föregående', "Tillbaka till sida " + str(currPage-1) + " av " + str(lastPage))
+    else:
+        previousItem = None
+
+    if nextPage:
+        # Add Next
+        nextItem = (offset + ITEMS_PER_PAGE, u'Nästa->', "Vidare till sida " + str(nextPage) + " av " + str(lastPage))
+    elif lastPage > 2:
+        # On last - "next is first"
+        nextItem = (0, u'Första->', u'Vidare till första sidan')
+    else:
+        nextItem = None
+
+    return (previousItem, nextItem)
+
+####################################################################################################
+def AddTV4ShowVideosNavigationDirs(oc,page,total_hits,title,showId,art,episodeReq,query):
+
+    # Offset starts at 0 - page at 1...
+    (previousItem, nextItem) = GetNavigationItems((page-1)*ITEMS_PER_PAGE, total_hits)
+    if previousItem:
+        (previousOffset, previousTitle, previousSummary) = previousItem
+        # Prepend PreviousItem directory
+        oc.objects.reverse()
+        oc.add(DirectoryObject(
+                key     = Callback(TV4ShowVideos,
+                                   title      = title, 
+                                   showId     = showId, 
+                                   art        = art, 
+                                   episodeReq = episodeReq, 
+                                   query      = query, 
+                                   page       = (previousOffset/ITEMS_PER_PAGE)+1
+                                   ),
+                title   = previousTitle,
+                summary = previousSummary,
+                art     = art
+                )
+               )
+        oc.objects.reverse()
+    if nextItem:
+        (nextOffset, nextTitle, nextSummary) = nextItem
+        # Append NextItem directory
+        oc.add(NextPageObject(
+                key     = Callback(TV4ShowVideos,
+                                   title      = title, 
+                                   showId     = showId, 
+                                   art        = art, 
+                                   episodeReq = episodeReq, 
+                                   query      = query, 
+                                   page       = (nextOffset/ITEMS_PER_PAGE)+1
+                                   ),
+                title   = nextTitle,
+                summary = nextSummary,
+                art     = art
+                )
+               )
+    return oc

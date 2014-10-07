@@ -127,6 +127,13 @@ def MainMenu():
         )
     )
 
+    oc.add(
+        PrefsObject(
+            title = unicode('Inställningar'),
+            summary = unicode('Logga in för att använda Premium\r\n\r\nDu kan även välja att visa alla program för att se vad Premium innebär.\r\n\r\n' + DISCLAIMER_NOTE)
+        )
+    )
+
     title = unicode('Sök')
     oc.add(
         InputDirectoryObject(
@@ -135,14 +142,6 @@ def MainMenu():
             prompt = title
         )
     )
-
-    oc.add(
-        PrefsObject(
-            title = unicode('Inställningar'),
-            summary = unicode('Logga in för att använda Premium\r\n\r\nDu kan även välja att visa alla program för att se vad Premium innebär.\r\n\r\n' + DISCLAIMER_NOTE)
-        )
-    )
-    
 
     return oc
 
@@ -153,7 +152,7 @@ def TV4MostWatched(title, episodes = True):
 
     if episodes:
         oc.add(DirectoryObject(key   = Callback(TV4MostWatched, 
-                                                title      = "Klipp",
+                                                title      = title + " - Klipp",
                                                 episodes   = False, 
                                                 ),
                                title = "Klipp"
@@ -345,14 +344,15 @@ def TV4ShowChoice(title, showId, art, thumb, summary):
 
         episodeReq = episodes['total_hits'] > 0
 
-    episode_oc = TV4ShowVideos(title      = title,
-                               showId     = showId,
-                               art        = art,
-                               episodeReq = episodeReq
-                               )
-        
-    for object in episode_oc.objects:
-        oc.add(object)
+    if episodes['total_hits'] + clips['total_hits'] > 0:
+        episode_oc = TV4ShowVideos(title      = title,
+                                   showId     = showId,
+                                   art        = art,
+                                   episodeReq = episodeReq
+                                   )
+
+        for object in episode_oc.objects:
+            oc.add(object)
 
     if len(oc) < 1:  
         oc.header  = NO_PROGRAMS_FOUND_HEADER
@@ -600,12 +600,15 @@ def Videos(oc, videos, date_range = None):
                 else:
                     ontime = re.sub(".+T([0-9]+:[0-9]+).+", "\\1 ", broadcast_time)
                     title = unicode(ontime + title)
+        else:
+            # Only add availability for non Live Events
+            summary = unicode(GetAvailability(video) + summary)
         
         if not Prefs['onlyfree'] and not Prefs['premium'] and video_is_premium_only: 
             oc.add(
                 DirectoryObject(
                     key = Callback(TV4PremiumRequired),
-                    title = title + " (Premium)" ,
+                    title = title + " (Premium)",
                     summary = summary,
                     thumb = thumb,
                     art = art,
@@ -724,3 +727,17 @@ def GetLiveURL(today, too_late):
     url = API_BASE_URL + '/play/video_assets?broadcast_from=%s&broadcast_to=%s&is_live=true&platform=web&sort=broadcast_date_time&sort_order=asc&per_page=%s' % (today, too_late, ITEMS_PER_PAGE)
     
     return url
+
+###################################################################################################
+def GetAvailability(video):
+
+    if video['availability']['human'] != None and re.search("\([0-9]+ dagar till\)",video['availability']['human']):
+        availabilty = u'Tillg�nglig: ' + re.sub(".+\(([0-9]+ dagar) till\).+","\\1. \r\n\r\n",video['availability']['human'])
+    elif video['availability']['availability_group_free'] != None and video['availability']['availability_group_free'] != "0":
+        availabilty = u'Tillg�nglig: ' + video['availability']['availability_group_free'] + " dagar. \r\n\r\n"
+    elif video['availability']['availability_group_premium'] != None:
+        availabilty = u'Tillg�nglig: ' + video['availability']['availability_group_premium'] + " dagar. \r\n\r\n"
+    else:
+        availabilty = ""
+    Log("JTDEBUG availabilty:%r" % availabilty)
+    return availabilty

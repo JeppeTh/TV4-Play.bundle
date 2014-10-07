@@ -367,6 +367,11 @@ def TV4ShowVideos(title, showId, art, episodeReq, query = '', page = 1):
     
     videos = JSON.ObjectFromURL(GetShowVideosURL(episodes = episodeReq, id = showId, query = query, page = page))
     oc = Videos(oc, videos)
+
+    try:
+        sortOnAirData(oc)
+    except:
+        oc.objects.reverse()
     
     if len(oc) < 1:
         oc.header  = NO_PROGRAMS_FOUND_HEADER
@@ -603,7 +608,7 @@ def Videos(oc, videos, date_range = None):
         else:
             # Only add availability for non Live Events
             summary = unicode(GetAvailability(video) + summary)
-        
+
         if not Prefs['onlyfree'] and not Prefs['premium'] and video_is_premium_only: 
             oc.add(
                 DirectoryObject(
@@ -741,3 +746,11 @@ def GetAvailability(video):
         availabilty = ""
     Log("JTDEBUG availabilty:%r" % availabilty)
     return availabilty
+
+####################################################################################################
+def sortOnAirData(Objects):
+    for obj in Objects.objects:
+        Log("JTDEBUG type of object %r" % obj.content)
+        if obj.originally_available_at == None:
+            return Objects.objects.reverse()
+    return Objects.objects.sort(key=lambda obj: (obj.originally_available_at,obj.title))

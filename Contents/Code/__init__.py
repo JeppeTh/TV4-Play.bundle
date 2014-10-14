@@ -386,7 +386,7 @@ def TV4ShowVideos(title, showId, art, episodeReq, query = '', page = 1):
     oc = ObjectContainer(title2 = unicode(title))
     
     videos = JSON.ObjectFromURL(GetShowVideosURL(episodes = episodeReq, id = showId, query = query, page = page))
-    oc = Videos(oc, videos)
+    oc = Videos(oc, videos, strip_show = True)
 
     try:
         sortOnAirData(oc)
@@ -584,7 +584,7 @@ def Search(query, title):
     return oc
 
 ####################################################################################################
-def Videos(oc, videos, date_range = None):
+def Videos(oc, videos, date_range = None, strip_show = False):
 
     for video in videos['results']:
         if 'is_drm_protected' in video:
@@ -621,6 +621,10 @@ def Videos(oc, videos, date_range = None):
         else:
             # Only add availability for non Live Events
             summary = unicode(GetAvailability(video) + summary)
+            # Strip show name from title
+            tmp_show = re.sub(" - Klipp", "", show)
+            if strip_show and tmp_show in title:
+                title = re.sub(tmp_show+"[ 	-,]*(:[ 	-,]*)*(.+)", "\\2", title)
 
         if not Prefs['onlyfree'] and not Prefs['premium'] and video_is_premium_only: 
             oc.add(

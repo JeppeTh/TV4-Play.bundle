@@ -623,8 +623,8 @@ def Videos(oc, videos, date_range = None, strip_show = False):
             summary = unicode(GetAvailability(video) + summary)
             # Strip show name from title
             tmp_show = re.sub(" - Klipp", "", show)
-            if strip_show and tmp_show in title:
-                title = re.sub(tmp_show+"[ 	-,]*(:[ 	-,]*)*(.+)", "\\2", title)
+            if strip_show and re.search(r"\b%s\b" % tmp_show, title):
+                title = re.sub(tmp_show+"[ 	\-,:]*(.+)", "\\1", title)
 
         if not Prefs['onlyfree'] and not Prefs['premium'] and video_is_premium_only: 
             oc.add(

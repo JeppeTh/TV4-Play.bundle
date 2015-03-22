@@ -19,7 +19,7 @@ MOVIES_URL     = API_BASE_URL + '/play/movie_assets?platform=web&start=%s&rows=%
 
 TEMPLATE_VIDEO_URL = 'http://www.tv4play.se/%s/%s?video_id=%s'
 
-ITEMS_PER_PAGE = 50
+ITEMS_PER_PAGE = 100
 
 DISCLAIMER_NOTE = unicode("Vissa program är skyddade med DRM(Digital Rights Management). Dessa kan för närvarande ej spelas upp.")
 PREMIUM_PREVIEW_NOTE = unicode("Notera att du ej kan spela upp de program som endast är tillgängliga för Premium.")
@@ -293,6 +293,7 @@ def TV4Shows(title, categoryId = '', query = '', page = 1):
         
         return oc
     else:
+        return oc
         # Offset starts at 0 - page at 1...
         (previousItem, nextItem) = GetNavigationItems((page-1)*ITEMS_PER_PAGE, programs['total_hits'])
 
@@ -537,7 +538,7 @@ def TV4Movies(title, offset = 0):
 ####################################################################################################
 @route(PREFIX + '/Search')
 def Search(query, title):
-    oc = ObjectContainer(title2 = unicode(title))
+    oc = ObjectContainer(title1=TITLE, title2=unicode(title + " '%s'" % query))
 
     unquotedQuery = query
     query = String.Quote(query)
@@ -623,7 +624,7 @@ def Videos(oc, videos, date_range = None, strip_show = False):
             summary = unicode(GetAvailability(video) + summary)
             # Strip show name from title
             tmp_show = re.sub(" - Klipp", "", show)
-            if strip_show and re.search(r"\b%s\b" % tmp_show, title):
+            if strip_show and re.compile(ur'\b%s\b' % tmp_show, re.UNICODE).search(title):
                 title = re.sub(tmp_show+"[ 	\-,:]*(.+)", "\\1", title)
 
         if not Prefs['onlyfree'] and not Prefs['premium'] and video_is_premium_only: 
@@ -657,7 +658,7 @@ def Videos(oc, videos, date_range = None, strip_show = False):
 def Programs(oc, programs):
     for program in programs['results']:
         oc.add(
-            DirectoryObject(
+            TVShowObject(
                 key =
                     Callback(
                         TV4ShowChoice,
@@ -667,6 +668,7 @@ def Programs(oc, programs):
                         thumb = program["program_image"],
                         summary = program["description"]
                     ),
+                rating_key = program["nid"],
                 title = unicode(program["name"]),
                 summary = unicode(program["description"]),
                 thumb = program["program_image"],
@@ -761,7 +763,7 @@ def GetAvailability(video):
         availabilty = u'Tillg�nglig: ' + video['availability']['availability_group_premium'] + " dagar. \r\n\r\n"
     else:
         availabilty = ""
-    Log("JTDEBUG availabilty:%r" % availabilty)
+    # Log("JTDEBUG availabilty:%r" % availabilty)
     return availabilty
 
 ####################################################################################################

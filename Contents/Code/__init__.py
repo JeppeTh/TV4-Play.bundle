@@ -600,7 +600,7 @@ def Videos(oc, videos, date_range = None, strip_show = False):
         title = unicode(video['title'])
         summary = unicode(video['description'])
         thumb = video['image']
-        art = video['program']['logo']
+        art = video['program']['logo'] if 'logo' in video['program'] else None
         duration = int(video['duration']) * 1000
         originally_available_at = Datetime.ParseDate(video['broadcast_date_time'].split('T')[0]).date()
         show = unicode(video['program']['name'])
